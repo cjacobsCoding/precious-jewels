@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Precious Jewels"
 config/description="Turn-based tactics prototype built in Godot"
-run/main_scene="res://scenes/Main.tscn"
+run/main_scene="res://scenes/Menu.tscn"
 config/features=PackedStringArray("4.6")
 
 [display]
