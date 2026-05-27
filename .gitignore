@@ -1,7 +1,10 @@
 # Godot
 .import/
 .export/
-export_presets.cfg
+.godot/
+godot
+godot_latest_linux.x86_64.zip
+*.uid
 *.import
 *.mono
 .godot/
