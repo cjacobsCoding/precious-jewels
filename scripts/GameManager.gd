@@ -8,6 +8,8 @@ enum TurnState { PLAYER, ENEMY, GAME_OVER }
 
 var selected_unit: Node = null
 var pending_attack_target: Node = null
+var active_unit_origin: Vector2i = Vector2i.ZERO
+var active_unit_has_origin: bool = false
 var units: Array = []
 var grid: Node = null
 var turn_state: TurnState = TurnState.PLAYER
@@ -85,7 +87,7 @@ func _unhandled_input(event: InputEvent) -> void:
     if event.button_index == MOUSE_BUTTON_RIGHT and pending_attack_target:
         pending_attack_target = null
         update_status_for_unit(selected_unit)
-        update_ui_message("Attack canceled. Choose a target or right-click again to wait.")
+        update_ui_message(get_active_unit_prompt())
         return
     if event.button_index == MOUSE_BUTTON_RIGHT and selected_unit:
         finish_player_action(selected_unit, "Unit waited.")
@@ -100,6 +102,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
     if selected_unit:
         if clicked_unit == selected_unit:
+            if selected_unit.has_moved:
+                update_ui_message("Finish this unit first: attack, wait, or press U to undo.")
+                return
             clear_selection()
             update_ui_message("Selection cleared.")
             return
@@ -125,19 +130,27 @@ func _unhandled_input(event: InputEvent) -> void:
                 update_ui_message("Enemy is out of this unit's threat range. Stats shown below.")
             return
         if selected_unit.can_move_to(cell, grid) and clicked_unit == null:
+            if not active_unit_has_origin:
+                active_unit_origin = selected_unit.tile_position
+                active_unit_has_origin = true
             selected_unit.set_tile_position(grid, cell)
             selected_unit.has_moved = true
             pending_attack_target = null
             selected_unit.queue_redraw()
             show_move_highlights(selected_unit)
             update_status_for_unit(selected_unit)
-            update_ui_message("Unit moved. Attack an adjacent enemy or right-click to wait.")
+            update_ui_message("Unit moved. Attack, wait, or press U to undo.")
             return
         if clicked_unit and clicked_unit.team == "player" and not clicked_unit.has_acted:
+            if selected_unit.has_moved:
+                update_ui_message("Finish this unit first: attack, wait, or press U to undo.")
+                return
             selected_unit.is_selected = false
             selected_unit.queue_redraw()
             clicked_unit.is_selected = true
             selected_unit = clicked_unit
+            active_unit_origin = selected_unit.tile_position
+            active_unit_has_origin = false
             pending_attack_target = null
             selected_unit.queue_redraw()
             show_move_highlights(selected_unit)
@@ -149,6 +162,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
     if clicked_unit and clicked_unit.team == "player" and not clicked_unit.has_acted:
         selected_unit = clicked_unit
+        active_unit_origin = selected_unit.tile_position
+        active_unit_has_origin = false
         selected_unit.is_selected = true
         selected_unit.queue_redraw()
         show_move_highlights(selected_unit)
@@ -310,6 +325,7 @@ func _on_end_turn_pressed() -> void:
 func finish_player_action(unit: Node, message: String) -> void:
     unit.has_moved = true
     unit.has_acted = true
+    active_unit_has_origin = false
     clear_selection()
     update_unit_tiles()
     update_ui_message(message)
@@ -320,6 +336,7 @@ func clear_selection() -> void:
         selected_unit.queue_redraw()
     selected_unit = null
     pending_attack_target = null
+    active_unit_has_origin = false
     if grid:
         grid.clear_highlights()
     update_status()
@@ -397,3 +414,26 @@ func show_attack_forecast(attacker: Node, target: Node) -> void:
     if has_node("UI/StatusLabel"):
         $UI/StatusLabel.text = "Forecast: deal %d damage | Enemy HP %d -> %d" % [damage, target.hp, remaining_hp]
     update_ui_message("Attack forecast shown. Click the enemy again to confirm.")
+
+func _unhandled_key_input(event: InputEvent) -> void:
+    if turn_state != TurnState.PLAYER or not event.pressed:
+        return
+    if event is InputEventKey and event.keycode == KEY_U:
+        undo_active_unit_move()
+
+func undo_active_unit_move() -> void:
+    if selected_unit == null or not selected_unit.has_moved or not active_unit_has_origin:
+        update_ui_message("No move to undo.")
+        return
+    selected_unit.set_tile_position(grid, active_unit_origin)
+    selected_unit.has_moved = false
+    pending_attack_target = null
+    active_unit_has_origin = false
+    show_move_highlights(selected_unit)
+    update_status_for_unit(selected_unit)
+    update_ui_message("Move undone. Choose a move, switch units, or wait.")
+
+func get_active_unit_prompt() -> String:
+    if selected_unit and selected_unit.has_moved:
+        return "Choose a target, right-click to wait, or press U to undo."
+    return "Choose a target or right-click to wait."

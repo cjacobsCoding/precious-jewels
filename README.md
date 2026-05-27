@@ -19,6 +19,7 @@ Turn-based tactics game prototype built with Godot.
 - Red tiles show spaces the selected unit can attack after moving.
 - Move first, then click an adjacent enemy to preview an attack.
 - Click the same enemy again to confirm the attack, or right-click to cancel the preview.
+- After moving, that unit must attack, wait, or press `U` to undo before another unit can act.
 - Right-click with no attack preview to wait, or use the End Turn button to pass to the enemy phase.
 - Click any enemy to inspect HP, attack, and defense in the status label.
 - This is a scaffold for a Fire Emblem-style tactics game; extend it with combat, turn order, AI, UI, and animation.

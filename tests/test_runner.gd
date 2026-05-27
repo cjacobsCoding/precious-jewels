@@ -28,6 +28,8 @@ func _init() -> void:
     run_test("click_input_move_then_attack", "test_click_input_move_then_attack")
     run_test("click_input_attack_requires_confirmation", "test_click_input_attack_requires_confirmation")
     run_test("right_click_cancels_attack_forecast", "test_right_click_cancels_attack_forecast")
+    run_test("moved_unit_blocks_switching", "test_moved_unit_blocks_switching")
+    run_test("undo_move_allows_switching_units", "test_undo_move_allows_switching_units")
     run_test("right_click_wait_after_move", "test_right_click_wait_after_move")
     run_test("click_deselection", "test_click_deselection")
     run_test("enemy_action_attack", "test_enemy_action_attack")
@@ -77,6 +79,12 @@ func make_click(position: Vector2, button_index: int = MOUSE_BUTTON_LEFT) -> Inp
     var event = InputEventMouseButton.new()
     event.position = position
     event.button_index = button_index
+    event.pressed = true
+    return event
+
+func make_key(keycode: Key) -> InputEventKey:
+    var event = InputEventKey.new()
+    event.keycode = keycode
     event.pressed = true
     return event
 
@@ -390,6 +398,52 @@ func test_right_click_cancels_attack_forecast() -> void:
     assert_equal(gm.pending_attack_target, null, "Right-click should cancel pending attack target")
     assert_false(player_unit.has_acted, "Canceling a forecast should not consume the action")
     assert_equal(gm.selected_unit, player_unit, "Canceling a forecast should keep the unit selected")
+
+func test_moved_unit_blocks_switching() -> void:
+    var gm = make_game_manager_with_grid(Vector2i(5, 5), 32)
+    var first_unit = UnitScript.new()
+    first_unit.team = "player"
+    first_unit.movement_range = 2
+    gm.add_child(first_unit)
+    first_unit.set_tile_position(gm.grid, Vector2i(1, 1))
+
+    var second_unit = UnitScript.new()
+    second_unit.team = "player"
+    second_unit.movement_range = 2
+    gm.add_child(second_unit)
+    second_unit.set_tile_position(gm.grid, Vector2i(1, 3))
+    gm.units = [first_unit, second_unit]
+
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(first_unit.tile_position)))
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(Vector2i(2, 1))))
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(second_unit.tile_position)))
+
+    assert_equal(gm.selected_unit, first_unit, "Moved unit should stay selected until action is finished or undone")
+    assert_false(second_unit.is_selected, "Another unit should not become selected while moved unit is pending")
+
+func test_undo_move_allows_switching_units() -> void:
+    var gm = make_game_manager_with_grid(Vector2i(5, 5), 32)
+    var first_unit = UnitScript.new()
+    first_unit.team = "player"
+    first_unit.movement_range = 2
+    gm.add_child(first_unit)
+    first_unit.set_tile_position(gm.grid, Vector2i(1, 1))
+
+    var second_unit = UnitScript.new()
+    second_unit.team = "player"
+    second_unit.movement_range = 2
+    gm.add_child(second_unit)
+    second_unit.set_tile_position(gm.grid, Vector2i(1, 3))
+    gm.units = [first_unit, second_unit]
+
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(first_unit.tile_position)))
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(Vector2i(2, 1))))
+    gm._unhandled_key_input(make_key(KEY_U))
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(second_unit.tile_position)))
+
+    assert_equal(first_unit.tile_position, Vector2i(1, 1), "Undo should return unit to its original tile")
+    assert_false(first_unit.has_moved, "Undo should clear moved state")
+    assert_equal(gm.selected_unit, second_unit, "After undo, another available unit can be selected")
 
 func test_right_click_wait_after_move() -> void:
     var gm = make_game_manager_with_grid(Vector2i(5, 5), 32)
