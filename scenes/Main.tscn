@@ -10,11 +10,18 @@ script = ExtResource( 2 )
 [node name="UI" type="CanvasLayer" parent="."]
 
 [node name="TurnLabel" type="Label" parent="UI"]
-margin/left = 10
-margin/top = 10
+offset_left = 10
+offset_top = 10
 text = "Turn: Player"
 
 [node name="MessageLabel" type="Label" parent="UI"]
-margin/left = 10
-margin/top = 40
+offset_left = 10
+offset_top = 40
 text = "Select a player unit to move."
+
+[node name="EndTurnButton" type="Button" parent="UI"]
+offset_left = 10
+offset_top = 72
+offset_right = 120
+offset_bottom = 104
+text = "End Turn"
