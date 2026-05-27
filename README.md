@@ -16,3 +16,6 @@ Turn-based tactics game prototype built with Godot.
 ## Notes
 - Click on a unit to select it, then click a valid tile to move.
 - This is a scaffold for a Fire Emblem-style tactics game; extend it with combat, turn order, AI, UI, and animation.
+
+## Development Plan
+See `DEVELOPMENT_PLAN.md` for a sprint-oriented roadmap focused on fast MVP delivery and iterating fun gameplay.
