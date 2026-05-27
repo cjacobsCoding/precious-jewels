@@ -1,0 +1,8 @@
+[application]
+config/name="Precious Jewels"
+config/description="Turn-based tactics prototype built in Godot"
+run/main_scene="res://scenes/Main.tscn"
+window/size/width=1280
+window/size/height=720
+[rendering]
+quality/driver/driver_name="GLES3"
