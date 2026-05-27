@@ -16,6 +16,12 @@ Turn-based tactics game prototype built with Godot.
 ## Notes
 - Click on a unit to select it, then click a valid tile to move.
 - This is a scaffold for a Fire Emblem-style tactics game; extend it with combat, turn order, AI, UI, and animation.
+- Follow DRY coding practices: avoid duplicate logic and keep gameplay systems centralized.
+- Add automated tests for every feature and run tests after each change.
+
+## Testing
+- Run `./run_tests.sh` from the repository root.
+- If Godot is installed under another name, set `GODOT_CMD` first: `GODOT_CMD=/path/to/godot ./run_tests.sh`.
 
 ## Development Plan
 See `DEVELOPMENT_PLAN.md` for a sprint-oriented roadmap focused on fast MVP delivery and iterating fun gameplay.

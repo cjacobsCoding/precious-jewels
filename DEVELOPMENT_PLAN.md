@@ -7,6 +7,13 @@ Build a Fire Emblem-style turn-based tactics game with a strong MVP focus. Start
 - Fast MVP: make the game playable from unit selection to enemy turn and victory conditions.
 - Keep the fun: ensure each sprint delivers interactive systems and satisfying player choices.
 - Build around bones first: establish core structure, then flesh out visuals, data, and polish.
+- Keep code DRY and maintainable: abstract repeated logic into reusable systems.
+- Automate validation: add tests for every new feature and run them after each change.
+
+## Quality Rules
+- Don't repeat yourself. If the same gameplay logic appears in multiple places, refactor it into a shared script.
+- Write tests for core game mechanics, including grid math, unit actions, and turn flow.
+- Run `./run_tests.sh` before committing or merging changes.
 
 ## Sprint 0: Skeleton Game Loop
 ### Objectives
