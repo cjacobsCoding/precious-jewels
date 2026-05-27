@@ -7,6 +7,7 @@ enum TurnState { PLAYER, ENEMY, GAME_OVER }
 @export var grid_height: int = 6
 
 var selected_unit: Node = null
+var pending_attack_target: Node = null
 var units: Array = []
 var grid: Node = null
 var turn_state: TurnState = TurnState.PLAYER
@@ -81,6 +82,11 @@ func _unhandled_input(event: InputEvent) -> void:
         return
     if not event.pressed:
         return
+    if event.button_index == MOUSE_BUTTON_RIGHT and pending_attack_target:
+        pending_attack_target = null
+        update_status_for_unit(selected_unit)
+        update_ui_message("Attack canceled. Choose a target or right-click again to wait.")
+        return
     if event.button_index == MOUSE_BUTTON_RIGHT and selected_unit:
         finish_player_action(selected_unit, "Unit waited.")
         maybe_finish_player_turn()
@@ -100,7 +106,12 @@ func _unhandled_input(event: InputEvent) -> void:
         if clicked_unit and clicked_unit.team == "enemy":
             update_status_for_unit(clicked_unit)
             if selected_unit.can_attack(clicked_unit):
+                if pending_attack_target != clicked_unit:
+                    pending_attack_target = clicked_unit
+                    show_attack_forecast(selected_unit, clicked_unit)
+                    return
                 var damage = selected_unit.attack_unit(clicked_unit)
+                pending_attack_target = null
                 finish_player_action(selected_unit, "Player dealt %d damage." % damage)
                 if not clicked_unit.is_alive():
                     remove_unit(clicked_unit)
@@ -116,6 +127,7 @@ func _unhandled_input(event: InputEvent) -> void:
         if selected_unit.can_move_to(cell, grid) and clicked_unit == null:
             selected_unit.set_tile_position(grid, cell)
             selected_unit.has_moved = true
+            pending_attack_target = null
             selected_unit.queue_redraw()
             show_move_highlights(selected_unit)
             update_status_for_unit(selected_unit)
@@ -126,6 +138,7 @@ func _unhandled_input(event: InputEvent) -> void:
             selected_unit.queue_redraw()
             clicked_unit.is_selected = true
             selected_unit = clicked_unit
+            pending_attack_target = null
             selected_unit.queue_redraw()
             show_move_highlights(selected_unit)
             update_status_for_unit(selected_unit)
@@ -306,6 +319,7 @@ func clear_selection() -> void:
         selected_unit.is_selected = false
         selected_unit.queue_redraw()
     selected_unit = null
+    pending_attack_target = null
     if grid:
         grid.clear_highlights()
     update_status()
@@ -376,3 +390,10 @@ func update_status_for_unit(unit: Node) -> void:
         return
     var team_name = "Player" if unit.team == "player" else "Enemy"
     $UI/StatusLabel.text = "%s HP %d/%d | ATK %d | DEF %d" % [team_name, unit.hp, unit.max_hp, unit.attack, unit.defense]
+
+func show_attack_forecast(attacker: Node, target: Node) -> void:
+    var damage = attacker.get_damage_against(target)
+    var remaining_hp = max(0, target.hp - damage)
+    if has_node("UI/StatusLabel"):
+        $UI/StatusLabel.text = "Forecast: deal %d damage | Enemy HP %d -> %d" % [damage, target.hp, remaining_hp]
+    update_ui_message("Attack forecast shown. Click the enemy again to confirm.")

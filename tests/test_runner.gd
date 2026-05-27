@@ -26,6 +26,8 @@ func _init() -> void:
     run_test("click_movement_action", "test_click_movement_action")
     run_test("click_input_move_keeps_unit_ready", "test_click_input_move_keeps_unit_ready")
     run_test("click_input_move_then_attack", "test_click_input_move_then_attack")
+    run_test("click_input_attack_requires_confirmation", "test_click_input_attack_requires_confirmation")
+    run_test("right_click_cancels_attack_forecast", "test_right_click_cancels_attack_forecast")
     run_test("right_click_wait_after_move", "test_right_click_wait_after_move")
     run_test("click_deselection", "test_click_deselection")
     run_test("enemy_action_attack", "test_enemy_action_attack")
@@ -332,11 +334,62 @@ func test_click_input_move_then_attack() -> void:
     gm._unhandled_input(make_click(gm.grid.grid_to_world(player_unit.tile_position)))
     gm._unhandled_input(make_click(gm.grid.grid_to_world(Vector2i(2, 1))))
     gm._unhandled_input(make_click(gm.grid.grid_to_world(enemy_unit.tile_position)))
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(enemy_unit.tile_position)))
 
     assert_equal(enemy_unit.hp, 6, "Move-then-attack should apply calculated damage")
     assert_true(player_unit.has_moved, "Attacking after moving should keep moved flag")
     assert_true(player_unit.has_acted, "Attacking should consume the unit action")
     assert_equal(gm.selected_unit, null, "Attacking should clear selection")
+
+func test_click_input_attack_requires_confirmation() -> void:
+    var gm = make_game_manager_with_grid(Vector2i(5, 5), 32)
+    var player_unit = UnitScript.new()
+    player_unit.team = "player"
+    player_unit.attack = 5
+    gm.add_child(player_unit)
+    player_unit.set_tile_position(gm.grid, Vector2i(1, 1))
+
+    var enemy_unit = UnitScript.new()
+    enemy_unit.team = "enemy"
+    enemy_unit.hp = 10
+    enemy_unit.defense = 1
+    gm.add_child(enemy_unit)
+    enemy_unit.set_tile_position(gm.grid, Vector2i(2, 1))
+    gm.units = [player_unit, enemy_unit]
+
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(player_unit.tile_position)))
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(enemy_unit.tile_position)))
+
+    assert_equal(enemy_unit.hp, 10, "First attack click should preview without damage")
+    assert_equal(gm.pending_attack_target, enemy_unit, "First attack click should set pending target")
+    assert_false(player_unit.has_acted, "Previewing an attack should not consume the action")
+
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(enemy_unit.tile_position)))
+
+    assert_equal(enemy_unit.hp, 6, "Second attack click should confirm and deal damage")
+    assert_equal(gm.pending_attack_target, null, "Confirmed attack should clear pending target")
+    assert_true(player_unit.has_acted, "Confirmed attack should consume the action")
+
+func test_right_click_cancels_attack_forecast() -> void:
+    var gm = make_game_manager_with_grid(Vector2i(5, 5), 32)
+    var player_unit = UnitScript.new()
+    player_unit.team = "player"
+    gm.add_child(player_unit)
+    player_unit.set_tile_position(gm.grid, Vector2i(1, 1))
+
+    var enemy_unit = UnitScript.new()
+    enemy_unit.team = "enemy"
+    gm.add_child(enemy_unit)
+    enemy_unit.set_tile_position(gm.grid, Vector2i(2, 1))
+    gm.units = [player_unit, enemy_unit]
+
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(player_unit.tile_position)))
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(enemy_unit.tile_position)))
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(enemy_unit.tile_position), MOUSE_BUTTON_RIGHT))
+
+    assert_equal(gm.pending_attack_target, null, "Right-click should cancel pending attack target")
+    assert_false(player_unit.has_acted, "Canceling a forecast should not consume the action")
+    assert_equal(gm.selected_unit, player_unit, "Canceling a forecast should keep the unit selected")
 
 func test_right_click_wait_after_move() -> void:
     var gm = make_game_manager_with_grid(Vector2i(5, 5), 32)
