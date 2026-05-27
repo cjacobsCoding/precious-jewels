@@ -1,7 +1,7 @@
 # Development Plan: Precious Jewels
 
 ## Vision
-Build a Fire Emblem-style turn-based tactics game with a strong MVP focus. Start by standing up the full game loop with placeholder systems, then iteratively add combat, progression, UI polish, and fun feedback.
+Build a Fire Emblem-style turn-based tactics game with a strong MVP focus. Start by standing up the full game loop with placeholder systems, then iteratively add combat, progression, UI polish, and fun feedback. When mechanics are ambiguous, use **Fire Emblem: The Sacred Stones** as the default baseline.
 
 ## Goals
 - Fast MVP: make the game playable from unit selection to enemy turn and victory conditions.
@@ -14,6 +14,17 @@ Build a Fire Emblem-style turn-based tactics game with a strong MVP focus. Start
 - Don't repeat yourself. If the same gameplay logic appears in multiple places, refactor it into a shared script.
 - Write tests for core game mechanics, including grid math, unit actions, and turn flow.
 - Run `./run_tests.sh` before committing or merging changes.
+- Deliver one coherent playable feature slice at a time, then pause for Caleb to playtest before stacking more features on top.
+
+## Mechanics Baseline
+Use Fire Emblem: The Sacred Stones as the reference point for default tactics rules unless the design intentionally diverges.
+
+- Keep the player phase / enemy phase structure.
+- Prefer move-then-action unit flow.
+- Add combat forecast before committed attacks.
+- Model unit stats around HP, attack/strength or magic, skill, speed, luck, defense, resistance, and movement.
+- Build toward weapon range, hit, avoid, crit, terrain bonuses, movement costs, death/removal, objectives, and map victory conditions.
+- Keep UI clarity high: selected unit stats, target stats, damage, hit chance, and danger/attack ranges should be readable before commitment.
 
 ## Sprint 0: Skeleton Game Loop
 ### Objectives
