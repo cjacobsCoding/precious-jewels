@@ -12,14 +12,21 @@ func _init() -> void:
     run_test("grid_world_conversion", "test_grid_world_conversion")
     run_test("unit_movement", "test_unit_movement")
     run_test("unit_attack", "test_unit_attack")
+    run_test("unit_defense_damage", "test_unit_defense_damage")
     run_test("unit_damage", "test_unit_damage")
     run_test("game_manager_closest_unit", "test_game_manager_closest_unit")
     run_test("game_manager_step_toward", "test_game_manager_step_toward")
+    run_test("game_manager_highlights_attack_targets", "test_game_manager_highlights_attack_targets")
+    run_test("unit_can_attack_after_moving", "test_unit_can_attack_after_moving")
     
     # New tests for uncovered areas
     run_test("turn_phase_transitions", "test_turn_phase_transitions")
     run_test("click_unit_selection", "test_click_unit_selection")
+    run_test("click_input_selects_unit", "test_click_input_selects_unit")
     run_test("click_movement_action", "test_click_movement_action")
+    run_test("click_input_move_keeps_unit_ready", "test_click_input_move_keeps_unit_ready")
+    run_test("click_input_move_then_attack", "test_click_input_move_then_attack")
+    run_test("right_click_wait_after_move", "test_right_click_wait_after_move")
     run_test("click_deselection", "test_click_deselection")
     run_test("enemy_action_attack", "test_enemy_action_attack")
     run_test("enemy_action_movement", "test_enemy_action_movement")
@@ -64,6 +71,23 @@ func assert_false(value: bool, message: String = "") -> void:
         failed_tests += 1
         push_error("Assertion failed: %s (expected false, got true)" % message)
 
+func make_click(position: Vector2, button_index: int = MOUSE_BUTTON_LEFT) -> InputEventMouseButton:
+    var event = InputEventMouseButton.new()
+    event.position = position
+    event.button_index = button_index
+    event.pressed = true
+    return event
+
+func make_game_manager_with_grid(grid_size: Vector2i = Vector2i(8, 6), tile_size: int = 64) -> Node:
+    var gm = GameManagerScript.new()
+    var grid = GridScript.new()
+    grid.name = "Grid"
+    grid.setup(grid_size, tile_size)
+    gm.grid = grid
+    get_root().add_child(gm)
+    gm.add_child(grid)
+    return gm
+
 func test_grid_bounds() -> void:
     var grid = GridScript.new()
     grid.setup(Vector2i(3, 3), 32)
@@ -94,10 +118,28 @@ func test_unit_attack() -> void:
     var target = UnitScript.new()
     target.team = "enemy"
     target.tile_position = Vector2i(1, 0)
+    target.defense = 0
     target.hp = 10
     assert_true(attacker.can_attack(target), "Adjacent unit should be attackable")
     attacker.attack_unit(target)
     assert_equal(target.hp, 7, "Attack should reduce target HP")
+
+func test_unit_defense_damage() -> void:
+    var attacker = UnitScript.new()
+    attacker.team = "player"
+    attacker.attack = 5
+    var target = UnitScript.new()
+    target.team = "enemy"
+    target.defense = 2
+    target.hp = 10
+    var damage = attacker.attack_unit(target)
+    assert_equal(damage, 3, "Defense should reduce incoming damage")
+    assert_equal(target.hp, 7, "Target HP should drop by calculated damage")
+
+    target.defense = 99
+    target.hp = 10
+    damage = attacker.attack_unit(target)
+    assert_equal(damage, 1, "Attacks should always deal at least one damage")
 
 func test_unit_damage() -> void:
     var target = UnitScript.new()
@@ -129,6 +171,52 @@ func test_game_manager_step_toward() -> void:
     target.tile_position = Vector2i(2, 1)
     var step = gm.get_step_toward(from_unit, target)
     assert_equal(step, Vector2i(1, 0), "Step toward should move on the larger axis")
+
+func test_game_manager_highlights_attack_targets() -> void:
+    var gm = GameManagerScript.new()
+    var grid = GridScript.new()
+    grid.setup(Vector2i(5, 5), 32)
+    gm.grid = grid
+
+    var player = UnitScript.new()
+    player.team = "player"
+    player.tile_position = Vector2i(1, 1)
+    player.movement_range = 1
+
+    var enemy = UnitScript.new()
+    enemy.team = "enemy"
+    enemy.tile_position = Vector2i(3, 1)
+
+    gm.units = [player, enemy]
+    gm.show_move_highlights(player)
+
+    assert_true(grid.move_highlighted_tiles.has(Vector2i(2, 1)), "Reachable empty tile should be move-highlighted")
+    assert_true(grid.attack_highlighted_tiles.has(enemy.tile_position), "Enemy reachable after movement should be attack-highlighted")
+    assert_false(grid.attack_highlighted_tiles.has(Vector2i(2, 1)), "Move tiles should stay yellow instead of also becoming attack highlights")
+
+func test_unit_can_attack_after_moving() -> void:
+    var gm = GameManagerScript.new()
+    var grid = GridScript.new()
+    grid.setup(Vector2i(5, 5), 32)
+    gm.grid = grid
+
+    var player = UnitScript.new()
+    player.team = "player"
+    player.tile_position = Vector2i(1, 1)
+    player.movement_range = 1
+
+    var enemy = UnitScript.new()
+    enemy.team = "enemy"
+    enemy.tile_position = Vector2i(3, 1)
+    enemy.hp = 10
+    enemy.defense = 0
+
+    gm.units = [player, enemy]
+    player.set_tile_position(grid, Vector2i(2, 1))
+    player.has_moved = true
+
+    assert_false(player.can_move_to(Vector2i(2, 2), grid), "Unit should not move again after moving")
+    assert_true(player.can_attack(enemy), "Unit should still be able to attack after moving")
 
 # NEW TESTS FOR UNCOVERED AREAS
 
@@ -172,6 +260,17 @@ func test_click_unit_selection() -> void:
     assert_equal(gm.selected_unit, player_unit, "Player unit should be selected after click")
     assert_true(player_unit.is_selected, "Selected unit's is_selected flag should be true")
 
+func test_click_input_selects_unit() -> void:
+    var gm = make_game_manager_with_grid()
+    gm.spawn_units()
+
+    var player_unit = gm.units[0]
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(player_unit.tile_position)))
+
+    assert_equal(gm.selected_unit, player_unit, "Clicking a player unit should select it")
+    assert_true(player_unit.is_selected, "Clicked player unit should be marked selected")
+    assert_true(gm.grid.move_highlighted_tiles.size() > 0, "Selecting a unit should show move highlights")
+
 func test_click_movement_action() -> void:
     var gm = GameManagerScript.new()
     var grid = GridScript.new()
@@ -193,6 +292,68 @@ func test_click_movement_action() -> void:
     
     assert_equal(player_unit.tile_position, target_pos, "Unit should move to target position")
     assert_not_equal(player_unit.tile_position, initial_pos, "Unit position should change after movement")
+
+func test_click_input_move_keeps_unit_ready() -> void:
+    var gm = make_game_manager_with_grid(Vector2i(5, 5), 32)
+    var player_unit = UnitScript.new()
+    player_unit.team = "player"
+    player_unit.movement_range = 2
+    gm.add_child(player_unit)
+    gm.units = [player_unit]
+    player_unit.set_tile_position(gm.grid, Vector2i(1, 1))
+
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(player_unit.tile_position)))
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(Vector2i(2, 1))))
+
+    assert_equal(player_unit.tile_position, Vector2i(2, 1), "Clicking a move tile should move the unit")
+    assert_true(player_unit.has_moved, "Moving should mark the unit as moved")
+    assert_false(player_unit.has_acted, "Moving should not consume the attack action")
+    assert_equal(gm.selected_unit, player_unit, "Moved unit should remain selected for attack or wait")
+    assert_false(gm.grid.move_highlighted_tiles.has(Vector2i(2, 2)), "Moved unit should not get a second move")
+
+func test_click_input_move_then_attack() -> void:
+    var gm = make_game_manager_with_grid(Vector2i(5, 5), 32)
+    var player_unit = UnitScript.new()
+    player_unit.team = "player"
+    player_unit.attack = 5
+    player_unit.movement_range = 1
+    gm.add_child(player_unit)
+    player_unit.set_tile_position(gm.grid, Vector2i(1, 1))
+
+    var enemy_unit = UnitScript.new()
+    enemy_unit.team = "enemy"
+    enemy_unit.hp = 10
+    enemy_unit.max_hp = 10
+    enemy_unit.defense = 1
+    gm.add_child(enemy_unit)
+    enemy_unit.set_tile_position(gm.grid, Vector2i(3, 1))
+    gm.units = [player_unit, enemy_unit]
+
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(player_unit.tile_position)))
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(Vector2i(2, 1))))
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(enemy_unit.tile_position)))
+
+    assert_equal(enemy_unit.hp, 6, "Move-then-attack should apply calculated damage")
+    assert_true(player_unit.has_moved, "Attacking after moving should keep moved flag")
+    assert_true(player_unit.has_acted, "Attacking should consume the unit action")
+    assert_equal(gm.selected_unit, null, "Attacking should clear selection")
+
+func test_right_click_wait_after_move() -> void:
+    var gm = make_game_manager_with_grid(Vector2i(5, 5), 32)
+    var player_unit = UnitScript.new()
+    player_unit.team = "player"
+    player_unit.movement_range = 2
+    gm.add_child(player_unit)
+    gm.units = [player_unit]
+    player_unit.set_tile_position(gm.grid, Vector2i(1, 1))
+
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(player_unit.tile_position)))
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(Vector2i(2, 1))))
+    gm._unhandled_input(make_click(gm.grid.grid_to_world(Vector2i(2, 1)), MOUSE_BUTTON_RIGHT))
+
+    assert_true(player_unit.has_moved, "Waiting after movement should keep moved flag")
+    assert_true(player_unit.has_acted, "Right-click wait should consume the unit action")
+    assert_equal(gm.selected_unit, null, "Waiting should clear selection")
 
 func test_click_deselection() -> void:
     var gm = GameManagerScript.new()
