@@ -88,9 +88,11 @@ func test_unit_movement() -> void:
 
 func test_unit_attack() -> void:
     var attacker = UnitScript.new()
+    attacker.team = "player"
     attacker.tile_position = Vector2i(0, 0)
     attacker.attack = 3
     var target = UnitScript.new()
+    target.team = "enemy"
     target.tile_position = Vector2i(1, 0)
     target.hp = 10
     assert_true(attacker.can_attack(target), "Adjacent unit should be attackable")

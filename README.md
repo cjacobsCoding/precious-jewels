@@ -14,7 +14,9 @@ Turn-based tactics game prototype built with Godot.
 - `scripts/Unit.gd` — basic unit logic
 
 ## Notes
-- Click on a unit to select it, then click a valid tile to move.
+- Left-click an available player unit to select it.
+- Click a highlighted tile to move, or click an adjacent enemy to attack.
+- Right-click a selected unit to wait, or use the End Turn button to pass to the enemy phase.
 - This is a scaffold for a Fire Emblem-style tactics game; extend it with combat, turn order, AI, UI, and animation.
 - Follow DRY coding practices: avoid duplicate logic and keep gameplay systems centralized.
 - Add automated tests for every feature and run tests after each change.
