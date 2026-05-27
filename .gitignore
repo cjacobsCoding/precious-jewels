@@ -4,6 +4,7 @@
 export_presets.cfg
 *.import
 *.mono
+.godot/
 *.tmp
 .project.godot.*
 # OS
