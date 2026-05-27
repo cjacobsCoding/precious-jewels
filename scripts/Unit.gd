@@ -5,10 +5,12 @@ class_name Unit
 @export var movement_range: int = 4
 @export var max_hp: int = 10
 @export var attack: int = 3
+@export var defense: int = 1
 var hp: int = 10
 var tile_size: int = 64
 var tile_position: Vector2i = Vector2i.ZERO
 var is_selected: bool = false
+var has_moved: bool = false
 var has_acted: bool = false
 
 func _ready() -> void:
@@ -25,7 +27,7 @@ func set_tile_position(grid: Node, tile: Vector2i) -> void:
     queue_redraw()
 
 func can_move_to(target: Vector2i, grid: Node) -> bool:
-    if has_acted:
+    if has_moved or has_acted:
         return false
     if not grid.is_in_bounds(target):
         return false
@@ -38,8 +40,13 @@ func can_attack(target: Node) -> bool:
     var distance = abs(target.tile_position.x - tile_position.x) + abs(target.tile_position.y - tile_position.y)
     return distance == 1
 
-func attack_unit(target: Node) -> void:
-    target.take_damage(attack)
+func get_damage_against(target: Node) -> int:
+    return max(1, attack - target.defense)
+
+func attack_unit(target: Node) -> int:
+    var damage = get_damage_against(target)
+    target.take_damage(damage)
+    return damage
 
 func take_damage(amount: int) -> void:
     hp -= amount
