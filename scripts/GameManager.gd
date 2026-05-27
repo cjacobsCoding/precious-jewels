@@ -12,14 +12,19 @@ var grid: Node = null
 var turn_state: TurnState = TurnState.PLAYER
 
 func _ready() -> void:
-    grid = $Grid
-    grid.setup(Vector2i(grid_width, grid_height), tile_size)
-    spawn_units()
-    update_unit_tiles()
-    update_ui()
+    if has_node("Grid"):
+        grid = $Grid
+        grid.setup(Vector2i(grid_width, grid_height), tile_size)
+        spawn_units()
+        update_unit_tiles()
+        update_ui()
+    elif grid != null:
+        spawn_units()
+        update_unit_tiles()
+        update_ui()
 
 func spawn_units() -> void:
-    var player_unit = preload("res://scripts/Unit.gd").instantiate()
+    var player_unit = preload("res://scripts/Unit.gd").new()
     player_unit.team = "player"
     player_unit.movement_range = 4
     player_unit.max_hp = 12
@@ -28,7 +33,7 @@ func spawn_units() -> void:
     units.append(player_unit)
     player_unit.set_tile_position(grid, Vector2i(1, 1))
 
-    var enemy_unit = preload("res://scripts/Unit.gd").instantiate()
+    var enemy_unit = preload("res://scripts/Unit.gd").new()
     enemy_unit.team = "enemy"
     enemy_unit.movement_range = 3
     enemy_unit.max_hp = 10
@@ -166,7 +171,7 @@ func get_step_toward(from_unit: Node, target: Node) -> Vector2i:
         step.y += sign(dy)
     if grid.is_in_bounds(step):
         return step
-    return null
+    return from_unit.tile_position
 
 func remove_unit(team_unit: Node) -> void:
     units.erase(team_unit)
@@ -175,11 +180,11 @@ func remove_unit(team_unit: Node) -> void:
         selected_unit = null
 
 func check_victory() -> bool:
-    if get_team_units("enemy").empty():
+    if get_team_units("enemy").is_empty():
         turn_state = TurnState.GAME_OVER
         update_ui_message("Victory! All enemies defeated.")
         return true
-    if get_team_units("player").empty():
+    if get_team_units("player").is_empty():
         turn_state = TurnState.GAME_OVER
         update_ui_message("Defeat. All player units lost.")
         return true
@@ -187,7 +192,14 @@ func check_victory() -> bool:
 
 func update_ui() -> void:
     if has_node("UI/TurnLabel"):
-        $UI/TurnLabel.text = "Turn: %s" % (turn_state == TurnState.PLAYER ? "Player" : turn_state == TurnState.ENEMY ? "Enemy" : "Game Over")
+        var turn_text: String
+        if turn_state == TurnState.PLAYER:
+            turn_text = "Player"
+        elif turn_state == TurnState.ENEMY:
+            turn_text = "Enemy"
+        else:
+            turn_text = "Game Over"
+        $UI/TurnLabel.text = "Turn: %s" % turn_text
     if has_node("UI/MessageLabel") and turn_state == TurnState.PLAYER:
         $UI/MessageLabel.text = "Select a player unit to move."
 

@@ -12,7 +12,7 @@ var is_selected: bool = false
 
 func _ready() -> void:
     hp = max_hp
-    update()
+    queue_redraw()
 
 func set_tile_position(grid: Node, tile: Vector2i) -> void:
     if not grid.is_in_bounds(tile):
@@ -21,7 +21,7 @@ func set_tile_position(grid: Node, tile: Vector2i) -> void:
     tile_position = tile
     tile_size = grid.tile_size
     position = grid.grid_to_world(tile)
-    update()
+    queue_redraw()
 
 func can_move_to(target: Vector2i, grid: Node) -> bool:
     if not grid.is_in_bounds(target):
@@ -40,16 +40,20 @@ func take_damage(amount: int) -> void:
     hp -= amount
     if hp < 0:
         hp = 0
-    update()
+    queue_redraw()
 
 func is_alive() -> bool:
     return hp > 0
 
 func update_label() -> void:
-    update()
+    queue_redraw()
 
 func _draw() -> void:
-    var color = team == "player" ? Color(0.2, 0.6, 1.0) : Color(1.0, 0.3, 0.3)
+    var color: Color
+    if team == "player":
+        color = Color(0.2, 0.6, 1.0)
+    else:
+        color = Color(1.0, 0.3, 0.3)
     draw_rect(Rect2(-tile_size * 0.35, -tile_size * 0.35, tile_size * 0.7, tile_size * 0.7), color)
     if is_selected:
         draw_rect(Rect2(-tile_size * 0.4, -tile_size * 0.4, tile_size * 0.8, tile_size * 0.8), Color(1, 1, 0, 0.25), false, 4)
